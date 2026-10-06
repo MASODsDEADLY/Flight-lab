@@ -19,8 +19,7 @@
     // Cesium Ion token
     // ------------------------------------------------------------
     Cesium.Ion.defaultAccessToken =
-        "YOUR_NEW_CESIUM_TOKEN_HERE";
-
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjNvUG5xTUVEQi1qaVBWRTYiLCJqdGkiOiIwMTcyOTc5NS05YzUxLTQxZmQtYmI1ZS00OWU3MTljMDVlZDUiLCJpZCI6NTA1NzM1LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3OTAxNjk0ODl9.Dw0aBAQIlDTV6K0pG91xOS_Kmrilzrx_82mCt_TDe94
     // ------------------------------------------------------------
     // Check that Flight core loaded
     // ------------------------------------------------------------
