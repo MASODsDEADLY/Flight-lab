@@ -6,10 +6,13 @@
  let state = Flight.initial();
  try {
  const viewer = new Cesium.Viewer('globe', {
-   baseLayer:false, baseLayerPicker:false, geocoder:false, animation:false,
+   baseLayer: Cesium.ImageryLayer.fromWorldImagery(), baseLayerPicker:false, geocoder:false, animation:false,
    timeline:false, homeButton:false, sceneModePicker:false, navigationHelpButton:false,
    fullscreenButton:false, infoBox:false, selectionIndicator:false,
-   terrainProvider:new Cesium.EllipsoidTerrainProvider()
+   terrain: Cesium.Terrain.fromWorldTerrain({
+    requestWaterMask: true,
+    requestVertexNormals: true
+ }),
  });
  viewer.imageryLayers.addImageryProvider(new Cesium.GridImageryProvider());
  const position = () => Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.height);
