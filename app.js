@@ -2,7 +2,24 @@
 (() => {
  const $ = id => document.getElementById(id);
  if (typeof Cesium === 'undefined') { $('message').textContent='Cesium did not load. Check your internet connection or CDN access.'; return; }
- Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6InVGU3VGTnNncGN6YlhmUjAiLCJqdGkiOiJlMWMxMWE3My05NzZkLTQzNDItYTZhOC1lZjAwMDM3Y2FlYzIiLCJpZCI6NTA1NzM1LCJzdWIiOiJyMzRndXkxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuY2VzaXVtLmNvbSIsImF1ZCI6IkFpcmNyYWZ0IHBhdGgiLCJpYXQiOjE3OTA2MDE4Nzd9.mZ1YRyGWG16xDV8SD8UgWvSBxToqLAh_9e1-4JsVQHI';
+Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjNvUG5xTUVEQi1qaVBWRTYiLCJqdGkiOiIwMTcyOTc5NS05YzUxLTQxZmQtYmI1ZS00OWU3MTljMDVlZDUiLCJpZCI6NTA1NzM1LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3OTAxNjk0ODl9.Dw0aBAQIlDTV6K0pG91xOS_Kmrilzrx_82mCt_TDe94";
+
+const viewer = new Cesium.Viewer("globe", {
+    terrain: Cesium.Terrain.fromWorldTerrain(),
+    baseLayer: Cesium.ImageryLayer.fromProviderAsync(
+        Cesium.IonImageryProvider.fromAssetId(2)
+    ),
+    baseLayerPicker: false,
+    geocoder: false,
+    animation: false,
+    timeline: false,
+    homeButton: false,
+    sceneModePicker: false,
+    navigationHelpButton: false,
+    fullscreenButton: false,
+    infoBox: false,
+    selectionIndicator: false
+});
  let state = Flight.initial();
  try {
  const viewer = new Cesium.Viewer('globe', {
