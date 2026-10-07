@@ -2,7 +2,7 @@
 (() => {
  const $ = id => document.getElementById(id);
  if (typeof Cesium === 'undefined') { $('message').textContent='Cesium did not load. Check your internet connection or CDN access.'; return; }
- Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6InVGU3VGTnNncGN6YlhmUjAiLCJqdGkiOiJlMWMxMWE3My05NzZkLTQzNDItYTZhOC1lZjAwMDM3Y2FlYzIiLCJpZCI6NTA1NzM1LCJzdWIiOiJyMzRndXkxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuY2VzaXVtLmNvbSIsImF1ZCI6IkFpcmNyYWZ0IHBhdGgiLCJpYXQiOjE3OTA2MDE4Nzd9.mZ1YRyGWG16xDV8SD8UgWvSBxToqLAh_9e1-4JsVQHI';
+ Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6InBTVVZveWtiZjc2dE8tTmsiLCJqdGkiOiJlMWMxMWE3My05NzZkLTQzNDItYTZhOC1lZjAwMDM3Y2FlYzIiLCJpZCI6NTA1NzM1LCJzdWIiOiJyMzRndXkxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuY2VzaXVtLmNvbSIsImF1ZCI6IkFpcmNyYWZ0IHBhdGgiLCJpYXQiOjE3OTEyNTQ1MTZ9.EUpVSOjjsi0oIlETr3ZvTniLT8dJS-ic_asokyWK7HQ';
  let state = Flight.initial();
  try {
  const viewer = new Cesium.Viewer('globe', {
