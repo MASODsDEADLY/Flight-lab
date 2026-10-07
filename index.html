@@ -1,11 +1,11 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI 101 • Flight Lab</title>
 <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.145/Build/Cesium/Widgets/widgets.css"><link rel="stylesheet" href="style.css"></head><body>
-<header><p>ALVERNIA · AI 101 · WEEK 6</p><h1>Build. Test. Explain.</h1><p>A simple CesiumJS flight lab • Grid globe, simulated motion, no real aircraft physics.</p></header>
+<header><p>ALVERNIA · AI 101 · WEEK 6</p><h1>Build. Test. Explain.</h1><p>A CesiumJS flight lab • Google Photorealistic 3D Tiles, simulated motion, no real aircraft physics.</p></header>
 <main><section aria-label="Flight controls"><h2>Your flight controls</h2><p id="message" role="status">Loading Cesium…</p>
 <div class="buttons"><button id="fly">Fly</button><button id="pause">Pause</button><button id="reset">Reset</button><button id="left">Left 10°</button><button id="right">Right 10°</button></div>
 <label for="speed">Speed (meters per second)</label><input id="speed" type="number" min="0" max="250" step="10" value="70">
-<label for="height">Height above model ellipsoid (meters)</label><input id="height" type="number" min="50" max="5000" step="50" value="500">
+<label for="height">Height above the 3D world (meters)</label><input id="height" type="number" min="50" max="5000" step="50" value="500">
 <p id="readout"></p><p>Change heading and height with the controls. Pause before exploring the view. Reset returns to the teaching origin.</p><p><a href="tests.html">Run movement tests</a></p></section>
 <div id="globe" aria-label="Interactive 3D globe showing a simulated moving marker"></div></main>
-<footer>The approximate Reading-area origin is not a verified campus pin. No terrain, imagery, collision detection, or lift/drag model. Use the numeric readout alongside the globe.</footer>
-<script src="https://cesium.com/downloads/cesiumjs/releases/1.145/Build/Cesium/Cesium.js"></script><script src="flight-core.js"></script><script src="app.js"></script></body></html>
+<footer>The approximate Reading-area origin is not a verified campus pin. Uses Google Photorealistic 3D Tiles through Cesium ion; no collision detection or lift/drag model. Use the numeric readout alongside the globe.</footer>
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.145/Build/Cesium/Cesium.js"></script><script src="config.js"></script><script src="flight-core.js"></script><script src="app.js"></script></body></html>
