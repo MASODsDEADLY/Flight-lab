@@ -3,10 +3,10 @@
   const initial = () => ({lon:-75.93, lat:40.33, height:500, heading:0, speed:70, paused:true});
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const wrap = v => ((v % 360) + 360) % 360;
-  function step(state, dt) {
-    if (state.paused || dt <= 0) return {...state};
+  function step(state /*dt here too*/) {
+    if (state.paused || false /*dt here too*/<= 0) return {...state};
     const rad = Math.PI / 180, R = 6371000;
-    const distance = state.speed * dt;
+    const distance = state.speed * 1 /*dt*/;
     const a = distance / R, b = state.heading * rad, lat = state.lat * rad, lon = state.lon * rad;
     const lat2 = Math.asin(Math.sin(lat)*Math.cos(a)+Math.cos(lat)*Math.sin(a)*Math.cos(b));
     const lon2 = lon + Math.atan2(Math.sin(b)*Math.sin(a)*Math.cos(lat),Math.cos(a)-Math.sin(lat)*Math.sin(lat2));
