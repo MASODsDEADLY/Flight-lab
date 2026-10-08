@@ -11,7 +11,14 @@
   const token = window.APP_CONFIG && window.APP_CONFIG.CESIUM_ION_TOKEN;
 
   if (!token) {
-    $('message').textContent = 'Cesium Ion token is missing. Check config.js.';
+    $('message').textContent =
+      'Cesium Ion token is missing. Check config.js.';
+    return;
+  }
+
+  if (typeof Flight === 'undefined') {
+    $('message').textContent =
+      'Flight controls did not load. Check flight-core.js.';
     return;
   }
 
@@ -23,7 +30,8 @@
     let viewer;
 
     try {
-      $('message').textContent = 'Loading Google Photorealistic 3D Tiles…';
+      $('message').textContent =
+        'Loading Google Photorealistic 3D Tiles…';
 
       viewer = new Cesium.Viewer('globe', {
         globe: false,
@@ -48,21 +56,28 @@
       viewer.scene.primitives.add(tileset);
 
       const position = () =>
-        Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.height);
+        Cesium.Cartesian3.fromDegrees(
+          state.lon,
+          state.lat,
+          state.height
+        );
 
-      // Camera settings.
+      // -------------------------------------------------------
+      // CAMERA AND FLIGHT TRAIL
+      // -------------------------------------------------------
+
       let followEnabled = true;
       let cameraRange = 2500;
       const cameraPitch = -30;
 
-      // Retain a limited number of trail points.
       const trailPositions = [position()];
       const maxTrailPoints = 360;
       const trailSampleInterval = 0.5;
+
       let trailElapsed = 0;
       let trailEnabled = true;
 
-      viewer.entities.add({
+      const aircraft = viewer.entities.add({
         position: new Cesium.CallbackProperty(position, false),
         point: {
           pixelSize: 16,
@@ -116,7 +131,77 @@
         }
       });
 
-      // Floating controls are created here, so no HTML edits are needed.
+      // -------------------------------------------------------
+      // LANDMARK TOUR SETTINGS
+      // -------------------------------------------------------
+
+      const tourStops = [
+        {
+          name: 'Reading area, Pennsylvania',
+          lon: -75.93,
+          lat: 40.33,
+          targetHeight: 180,
+          range: 4200
+        },
+        {
+          name: 'New York City — Statue of Liberty',
+          lon: -74.0445,
+          lat: 40.6892,
+          targetHeight: 45,
+          range: 1600
+        },
+        {
+          name: 'New York City — Midtown Manhattan',
+          lon: -73.9857,
+          lat: 40.7484,
+          targetHeight: 180,
+          range: 2600
+        },
+        {
+          name: 'Washington, D.C. — National Mall',
+          lon: -77.0353,
+          lat: 38.8895,
+          targetHeight: 35,
+          range: 2400
+        },
+        {
+          name: 'San Francisco — Golden Gate Bridge',
+          lon: -122.4783,
+          lat: 37.8199,
+          targetHeight: 80,
+          range: 3200
+        },
+        {
+          name: 'Paris — Eiffel Tower',
+          lon: 2.2945,
+          lat: 48.8584,
+          targetHeight: 140,
+          range: 1800
+        },
+        {
+          name: 'Rome — Colosseum',
+          lon: 12.4922,
+          lat: 41.8902,
+          targetHeight: 55,
+          range: 1400
+        }
+      ];
+
+      const TOUR_DWELL_SECONDS = 20;
+      const TOUR_TRAVEL_SECONDS = 8;
+      const TOUR_ORBIT_DEGREES_PER_SECOND = 3;
+
+      let tourActive = false;
+      let tourTraveling = false;
+      let tourIndex = 0;
+      let tourElapsed = 0;
+      let tourHeading = 0;
+      let tourGeneration = 0;
+
+      // -------------------------------------------------------
+      // FLOATING CONTROL PANEL
+      // -------------------------------------------------------
+
       const panel = document.createElement('div');
 
       panel.style.cssText = `
@@ -124,6 +209,7 @@
         top: 16px;
         right: 16px;
         z-index: 10;
+        width: 270px;
         max-width: calc(100% - 32px);
         box-sizing: border-box;
         padding: 14px;
@@ -143,16 +229,23 @@
           font-weight: 700;
           letter-spacing: 2px;
           color: #8edfff;
-        ">FLIGHT CAMERA</div>
+        ">FLIGHT & LANDMARK TOUR</div>
 
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button type="button" data-action="camera">Free camera</button>
-          <button type="button" data-action="trail">Trail: ON</button>
+          <button type="button" data-action="camera">
+            Free camera
+          </button>
+          <button type="button" data-action="trail">
+            Trail: ON
+          </button>
         </div>
 
         <label style="display: block; margin-top: 12px;">
-          Camera distance
-          <span data-role="distance" style="float: right;">2500 m</span>
+          Flight camera distance
+          <span data-role="distance" style="float: right;">
+            2500 m
+          </span>
+
           <input
             data-role="zoom"
             type="range"
@@ -170,6 +263,26 @@
           >
         </label>
 
+        <button
+          type="button"
+          data-action="tour"
+          style="width: 100%; margin-top: 12px;"
+        >
+          Start landmark tour
+        </button>
+
+        <div
+          data-role="tour-status"
+          style="
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(101, 217, 255, 0.08);
+            color: #b9eaff;
+            line-height: 1.5;
+          "
+        ></div>
+
         <div style="
           margin-top: 10px;
           color: #a6b7cc;
@@ -177,19 +290,38 @@
           line-height: 1.6;
         ">
           Space: fly / pause · ← →: turn<br>
-          C: camera mode · R: reset
+          C: camera mode · R: reset · T: tour
         </div>
       `;
 
       viewer.container.appendChild(panel);
 
-      const cameraButton = panel.querySelector('[data-action="camera"]');
-      const trailButton = panel.querySelector('[data-action="trail"]');
-      const zoomInput = panel.querySelector('[data-role="zoom"]');
-      const distanceLabel = panel.querySelector('[data-role="distance"]');
+      const cameraButton = panel.querySelector(
+        '[data-action="camera"]'
+      );
+
+      const trailButton = panel.querySelector(
+        '[data-action="trail"]'
+      );
+
+      const tourButton = panel.querySelector(
+        '[data-action="tour"]'
+      );
+
+      const zoomInput = panel.querySelector(
+        '[data-role="zoom"]'
+      );
+
+      const distanceLabel = panel.querySelector(
+        '[data-role="distance"]'
+      );
+
+      const tourStatus = panel.querySelector(
+        '[data-role="tour-status"]'
+      );
 
       for (const button of panel.querySelectorAll('button')) {
-        button.style.cssText = `
+        button.style.cssText += `
           padding: 8px 12px;
           border: 1px solid rgba(130, 190, 255, 0.3);
           border-radius: 8px;
@@ -200,29 +332,78 @@
         `;
       }
 
-      function paint() {
-        $('message').textContent = state.paused
-          ? 'Paused — ready to inspect'
-          : 'Flying — simulated movement';
+      tourButton.style.background = '#123c51';
+      tourButton.style.borderColor = 'rgba(101, 217, 255, 0.5)';
 
-        $('readout').textContent =
-          `Heading ${state.heading.toFixed(0)}° · ` +
-          `Longitude ${state.lon.toFixed(5)} · ` +
-          `Latitude ${state.lat.toFixed(5)} · ` +
-          `Height ${state.height.toFixed(0)} m · ` +
-          `Speed ${state.speed.toFixed(0)} m/s`;
+      // -------------------------------------------------------
+      // UI UPDATES
+      // -------------------------------------------------------
+
+      function paint() {
+        if (tourActive) {
+          const stop = tourStops[tourIndex];
+
+          const remaining = Math.max(
+            0,
+            Math.ceil(TOUR_DWELL_SECONDS - tourElapsed)
+          );
+
+          $('message').textContent = tourTraveling
+            ? `Traveling to ${stop.name}…`
+            : `Tour: ${stop.name} · Next stop in ${remaining}s`;
+
+          $('readout').textContent =
+            `Stop ${tourIndex + 1} of ${tourStops.length} · ` +
+            `Longitude ${stop.lon.toFixed(5)} · ` +
+            `Latitude ${stop.lat.toFixed(5)} · ` +
+            (tourTraveling
+              ? 'Camera traveling'
+              : 'Sightseeing orbit');
+
+          tourStatus.textContent = tourTraveling
+            ? `Next destination: ${stop.name}`
+            : `${stop.name} — departing in ${remaining}s`;
+        } else {
+          $('message').textContent = state.paused
+            ? 'Paused — ready to inspect'
+            : 'Flying — simulated movement';
+
+          $('readout').textContent =
+            `Heading ${state.heading.toFixed(0)}° · ` +
+            `Longitude ${state.lon.toFixed(5)} · ` +
+            `Latitude ${state.lat.toFixed(5)} · ` +
+            `Height ${state.height.toFixed(0)} m · ` +
+            `Speed ${state.speed.toFixed(0)} m/s`;
+
+          tourStatus.textContent =
+            'Tour stopped. Start it to visit the landmarks.';
+        }
 
         cameraButton.textContent = followEnabled
           ? 'Free camera'
           : 'Follow flight';
 
-        trailButton.textContent = trailEnabled ? 'Trail: ON' : 'Trail: OFF';
+        trailButton.textContent = trailEnabled
+          ? 'Trail: ON'
+          : 'Trail: OFF';
+
+        tourButton.textContent = tourActive
+          ? 'Stop landmark tour'
+          : 'Start landmark tour';
 
         distanceLabel.textContent = `${cameraRange} m`;
+
+        // This slider controls manual flight, not the tour orbit.
+        zoomInput.disabled = tourActive;
+        zoomInput.style.opacity = tourActive ? '0.45' : '1';
       }
 
+      // -------------------------------------------------------
+      // MANUAL FLIGHT CAMERA
+      // -------------------------------------------------------
+
       function follow() {
-        if (!followEnabled) return;
+        if (!followEnabled || tourActive) return;
 
         viewer.camera.lookAt(
           position(),
@@ -235,12 +416,13 @@
       }
 
       function toggleCamera() {
+        stopTour();
+
         followEnabled = !followEnabled;
 
         if (followEnabled) {
           follow();
         } else {
-          // Release the flight-relative camera transform for exploration.
           viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
         }
 
@@ -248,12 +430,17 @@
       }
 
       function turn(amount) {
+        stopTour();
+
         state.heading = Flight.wrap(state.heading + amount);
+
         paint();
         follow();
       }
 
       function resetFlight() {
+        stopTour();
+
         state = Flight.initial();
 
         $('speed').value = state.speed;
@@ -271,12 +458,176 @@
         follow();
       }
 
-      $('fly').onclick = () => {
-        state.paused = false;
+      // -------------------------------------------------------
+      // TOUR CAMERA
+      // -------------------------------------------------------
+
+      function tourTarget(stop) {
+        return Cesium.Cartesian3.fromDegrees(
+          stop.lon,
+          stop.lat,
+          stop.targetHeight
+        );
+      }
+
+      function showTourOrbit() {
+        if (!tourActive) return;
+
+        const stop = tourStops[tourIndex];
+
+        viewer.camera.lookAt(
+          tourTarget(stop),
+          new Cesium.HeadingPitchRange(
+            Cesium.Math.toRadians(tourHeading),
+            Cesium.Math.toRadians(-30),
+            stop.range
+          )
+        );
+      }
+
+      function visitTourStop(index, animate = true) {
+        tourIndex = index;
+        tourElapsed = 0;
+        tourHeading = 0;
+        tourTraveling = animate;
+
+        const stop = tourStops[tourIndex];
+        const generation = ++tourGeneration;
+
+        viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+
+        if (!animate) {
+          showTourOrbit();
+          paint();
+          return;
+        }
+
+        viewer.camera.flyToBoundingSphere(
+          new Cesium.BoundingSphere(tourTarget(stop), 100),
+          {
+            duration: TOUR_TRAVEL_SECONDS,
+            offset: new Cesium.HeadingPitchRange(
+              0,
+              Cesium.Math.toRadians(-30),
+              stop.range
+            ),
+            complete: () => {
+              if (
+                !tourActive ||
+                generation !== tourGeneration
+              ) {
+                return;
+              }
+
+              tourTraveling = false;
+              tourElapsed = 0;
+
+              showTourOrbit();
+              paint();
+            },
+            cancel: () => {
+              if (
+                !tourActive ||
+                generation !== tourGeneration
+              ) {
+                return;
+              }
+
+              stopTour();
+            }
+          }
+        );
+
         paint();
+      }
+
+      function startTour() {
+        if (tourActive) return;
+
+        state.paused = true;
+        followEnabled = false;
+
+        tourActive = true;
+
+        // Hide the simulated aircraft and its trail while sightseeing.
+        aircraft.show = false;
+        trail.show = false;
+
+        // Prevent mouse camera movements from interrupting the tour.
+        viewer.scene.screenSpaceCameraController.enableInputs = false;
+
+        // Start at Reading immediately.
+        visitTourStop(0, false);
+      }
+
+      function stopTour() {
+        if (!tourActive) return;
+
+        tourActive = false;
+        tourTraveling = false;
+
+        // Invalidate callbacks before canceling the camera flight.
+        tourGeneration++;
+
+        viewer.camera.cancelFlight();
+        viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+
+        viewer.scene.screenSpaceCameraController.enableInputs = true;
+
+        // Keep the current sightseeing view until follow is selected.
+        followEnabled = false;
+        state.paused = true;
+
+        aircraft.show = true;
+        trail.show = trailEnabled;
+
+        paint();
+      }
+
+      function updateTour(dt) {
+        if (
+          !tourActive ||
+          tourTraveling ||
+          document.hidden
+        ) {
+          return;
+        }
+
+        tourElapsed += dt;
+
+        tourHeading =
+          (
+            tourHeading +
+            TOUR_ORBIT_DEGREES_PER_SECOND * dt
+          ) % 360;
+
+        showTourOrbit();
+
+        if (tourElapsed >= TOUR_DWELL_SECONDS) {
+          const nextIndex =
+            (tourIndex + 1) % tourStops.length;
+
+          visitTourStop(nextIndex);
+        }
+      }
+
+      // -------------------------------------------------------
+      // BUTTONS AND INPUTS
+      // -------------------------------------------------------
+
+      $('fly').onclick = () => {
+        stopTour();
+
+        state.paused = false;
+        followEnabled = true;
+
+        paint();
+        follow();
       };
 
       $('pause').onclick = () => {
+        stopTour();
+
         state.paused = true;
         paint();
       };
@@ -289,12 +640,25 @@
 
       trailButton.onclick = () => {
         trailEnabled = !trailEnabled;
-        trail.show = trailEnabled;
+
+        trail.show = trailEnabled && !tourActive;
+
         paint();
       };
 
+      tourButton.onclick = () => {
+        if (tourActive) {
+          stopTour();
+        } else {
+          startTour();
+        }
+      };
+
       zoomInput.oninput = () => {
+        if (tourActive) return;
+
         cameraRange = Number(zoomInput.value);
+
         paint();
         follow();
       };
@@ -306,6 +670,8 @@
         $(id).value = state[id];
 
         $(id).onchange = () => {
+          stopTour();
+
           const n = Number($(id).value);
 
           if (Number.isFinite(n)) {
@@ -319,27 +685,42 @@
         };
       }
 
+      // -------------------------------------------------------
+      // KEYBOARD CONTROLS
+      // -------------------------------------------------------
+
       document.addEventListener('keydown', event => {
         const target = event.target;
 
-        // Leave typing and native control interactions alone.
+        // Do not override typing or native form-control behavior.
         if (
           target instanceof Element &&
           target.closest(
-            'input, textarea, select, button, [contenteditable]:not([contenteditable="false"])'
+            'input, textarea, select, button, ' +
+            '[contenteditable]:not([contenteditable="false"])'
           )
         ) {
           return;
         }
 
-        if (event.ctrlKey || event.metaKey || event.altKey) return;
+        if (event.ctrlKey || event.metaKey || event.altKey) {
+          return;
+        }
 
         switch (event.code) {
           case 'Space':
             event.preventDefault();
 
             if (!event.repeat) {
+              stopTour();
+
               state.paused = !state.paused;
+
+              if (!state.paused) {
+                followEnabled = true;
+                follow();
+              }
+
               paint();
             }
             break;
@@ -355,55 +736,87 @@
             break;
 
           case 'KeyC':
-            if (!event.repeat) toggleCamera();
+            if (!event.repeat) {
+              toggleCamera();
+            }
             break;
 
           case 'KeyR':
-            if (!event.repeat) resetFlight();
+            if (!event.repeat) {
+              resetFlight();
+            }
+            break;
+
+          case 'KeyT':
+            if (!event.repeat) {
+              if (tourActive) {
+                stopTour();
+              } else {
+                startTour();
+              }
+            }
             break;
         }
       });
 
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-          state.paused = true;
-          paint();
-        }
-      });
+      // -------------------------------------------------------
+      // RENDER LOOP
+      // -------------------------------------------------------
 
       let last = performance.now();
       let lastPaint = 0;
 
+      document.addEventListener('visibilitychange', () => {
+        // Avoid a large movement step when returning to this tab.
+        last = performance.now();
+
+        if (document.hidden) {
+          state.paused = true;
+        }
+
+        paint();
+      });
+
       viewer.scene.preRender.addEventListener(() => {
         const now = performance.now();
         const dt = Math.min((now - last) / 1000, 0.1);
+
         last = now;
 
-        state = Flight.step(state, dt);
+        if (!document.hidden) {
+          if (tourActive) {
+            updateTour(dt);
+          } else {
+            state = Flight.step(state, dt);
 
-        if (!state.paused) {
-          trailElapsed += dt;
+            if (!state.paused) {
+              trailElapsed += dt;
 
-          if (trailElapsed >= trailSampleInterval) {
-            trailElapsed %= trailSampleInterval;
+              if (trailElapsed >= trailSampleInterval) {
+                trailElapsed %= trailSampleInterval;
 
-            const nextPosition = position();
-            const previousPosition =
-              trailPositions[trailPositions.length - 1];
+                const nextPosition = position();
+                const previousPosition =
+                  trailPositions[trailPositions.length - 1];
 
-            if (
-              !previousPosition ||
-              Cesium.Cartesian3.distance(previousPosition, nextPosition) > 1
-            ) {
-              trailPositions.push(nextPosition);
+                if (
+                  !previousPosition ||
+                  Cesium.Cartesian3.distance(
+                    previousPosition,
+                    nextPosition
+                  ) > 1
+                ) {
+                  trailPositions.push(nextPosition);
 
-              if (trailPositions.length > maxTrailPoints) {
-                trailPositions.shift();
+                  if (trailPositions.length > maxTrailPoints) {
+                    trailPositions.shift();
+                  }
+                }
               }
+
+              follow();
             }
           }
-
-          follow();
         }
 
         if (now - lastPaint > 150) {
@@ -412,8 +825,8 @@
         }
       });
 
-      paint();
-      follow();
+      // Start the landmark tour automatically.
+      startTour();
 
     } catch (error) {
       console.error('Flight simulator startup failed:', error);
